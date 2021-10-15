@@ -1,0 +1,64 @@
+#!/bin/sh
+
+remote_directory='/home/nginx/html/screenshots'
+url_template='https://example.org/images/'
+local_root='/home/kageru/screenshots'
+date_format='%y/%m'
+random_chars=5
+# Leave empty if not needed. I use this to keep track which machine/user uploaded which screenshot.
+prefix='k'
+# put something here that’s configured in your ~/.ssh/config
+ssh_host='localhost'
+
+generate_name() {
+  cat /dev/urandom | tr -dc '0-9a-zA-Z' | head -c "$1"
+}
+
+capture() {
+  if [ -n WAYLAND_DISPLAY ]; then
+    slurp | grim -g - "$1"
+  else
+    maim -suk "$1"
+  fi
+}
+
+clipboard() {
+  if [ -n WAYLAND_DISPLAY ]; then
+    echo "$1" | wl-copy
+  else
+    echo "$1" | xsel -b
+  fi
+}
+
+upload() {
+  scp "$1" "$ssh_host:$2"
+}
+
+exists() {
+  ssh "$ssh_host" "ls \"$1\""
+}
+
+main() {
+  filename="$prefix$(generate_name $random_chars).png"
+  date_folder="$(date "+$date_format")"
+  local_directory="$local_root/$date_folder"
+  mkdir -p "$local_directory"
+  capture_and_upload "$local_directory/$filename" "$remote_directory/$filename"
+}
+
+capture_and_upload() {
+  local_file="$1"
+  remote_file="$2"
+  if [ ! "$(exists "$remote_file")" ]; then
+    capture "$local_file"
+    upload "$local_file" "$remote_file"
+    full_url="$url_template/$filename"
+    clipboard "$full_url"
+    notify-send "$full_url"
+  else
+    echo "Debug: file $local_file already exists, retrying…"
+    prepare_files # recurse here to generate a new name and start anew
+  fi
+}
+
+main
