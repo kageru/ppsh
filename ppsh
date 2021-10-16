@@ -72,7 +72,12 @@ capture_and_upload() {
     notify-send "$full_url"
   else
     echo "Debug: file $local_file already exists, retrying…"
-    prepare_files # recurse here to generate a new name and start anew
+    # recurse here to generate a new name and start anew
+    if [ -f "$local_file" ]; then
+      main "$local_file"
+    else
+      main
+    fi
   fi
 }
 
