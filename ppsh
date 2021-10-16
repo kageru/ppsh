@@ -39,18 +39,33 @@ exists() {
 }
 
 main() {
-  filename="$prefix$(generate_name $random_chars).png"
-  date_folder="$(date "+$date_format")"
-  local_directory="$local_root/$date_folder"
-  mkdir -p "$local_directory"
-  capture_and_upload "$local_directory/$filename" "$remote_directory/$filename"
+  if [ -n "$1" ]; then
+    ext="$(echo "$1" | awk '{ n=split($0, a, "."); print a[n] }')"
+    if [ "$ext" == "$1" ]; then # file has no extension
+      filename="$prefix$(generate_name $random_chars)"
+    else 
+      filename="$prefix$(generate_name $random_chars).$ext"
+    fi
+    local_file="$1"
+  else
+    filename="$prefix$(generate_name $random_chars).png"
+    date_folder="$(date "+$date_format")"
+    local_directory="$local_root/$date_folder"
+    mkdir -p "$local_directory"
+    local_file="$local_directory/$filename"
+  fi
+  capture_and_upload "$local_file" "$remote_directory/$filename"
 }
 
 capture_and_upload() {
   local_file="$1"
   remote_file="$2"
   if [ ! "$(exists "$remote_file")" ]; then
-    capture "$local_file"
+    # If the file already exists, we’re in file upload mode.
+    # If it doesn’t, capture a screenshot and save it there.
+    if [ ! -f "$local_file" ]; then
+      capture "$local_file"
+    fi
     upload "$local_file" "$remote_file"
     full_url="$url_template/$filename"
     clipboard "$full_url"
@@ -61,4 +76,4 @@ capture_and_upload() {
   fi
 }
 
-main
+main "$1"
