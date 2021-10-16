@@ -24,7 +24,7 @@ capture() {
 
 clipboard() {
   if [ -n WAYLAND_DISPLAY ]; then
-    echo "$1" | wl-copy
+    wl-copy "$1"
   else
     echo "$1" | xsel -b
   fi
